@@ -37,8 +37,8 @@ This program enables global hotkey functionality on Windows, registering hotkeys
 
 ## Usage Instructions
 
-1. Place the compiled `ShortCut.exe` file and the configured `setting.ini` file in the same directory.
-2. Run `ShortCut.exe`. A dialog box will pop up asking if you want to enable it at startup. Choose "Yes" or "No". The program will then run in the background, listening for hotkeys.
+1. Place the compiled `tinyShortCut.exe` file and the configured `setting.ini` file in the same directory.
+2. Run `tinyShortCut.exe`. A dialog box will pop up asking if you want to enable it at startup. Choose "Yes" or "No". The program will then run in the background, listening for hotkeys.
 3. When a hotkey launches a program requiring administrator privileges, Windows will prompt for confirmation each time. You can use the Ctrl+Alt+U hotkey (or a customized hotkey) to grant administrator privileges. Afterward, the confirmation window won’t appear for programs requiring elevated privileges.
 4. To close this program, press the Ctrl+Alt+K hotkey (or a customized hotkey), which will trigger a confirmation dialog. Choose "Yes" to exit the program.
 
@@ -46,6 +46,21 @@ This program enables global hotkey functionality on Windows, registering hotkeys
 
 ## Compilation Instructions
 
-Open Visual Studio, create a new empty VC++ project, and add `shortcut.cpp` to the project. Then compile the project.
+There are now two recommended ways to compile the project:
 
-(Tested on Windows 10 with Visual Studio 2008, 2013, and 2017.)
+1. **Using CMake **  
+   
+   - Run `cmake` to generate a Visual Studio solution file (`*.sln`):  
+     ```bash
+     cmake -S . -B build
+     ```
+   - If your system has multiple Visual Studio versions installed, you can explicitly specify the desired version with the `-G` flag. For example, to generate a solution for Visual Studio 2022:  
+     ```bash
+     cmake -S . -B build -G "Visual Studio 17 2022"
+     ```
+   - Open the generated solution file in the `build` directory with Visual Studio, and then build the project.  
+   
+2. **Using Visual Studio (Legacy Method)**  
+   - Open Visual Studio, create a new empty VC++ project, and add `shortcut.cpp` to the project. Then compile the project.  
+
+​              (Tested on Windows 10 with Visual Studio 2008, 2013, 2017)

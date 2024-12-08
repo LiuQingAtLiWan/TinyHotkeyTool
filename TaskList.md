@@ -11,7 +11,7 @@
     - [ ] Create a sample setting file
 - **Add Features**
     - [ ] Toggle between multiple top-level windows of the same application
-    - [ ] Remove newline characters from the clipboard text and paste it
+    - [ ] *Remove newline characters from the clipboard text and paste it*
 
 - **Build-related**
     - [ ] Set the project to depend on the MSVC static runtime library

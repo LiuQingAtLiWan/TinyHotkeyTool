@@ -6,6 +6,17 @@ using std::string;
 
 #define HOTKEY_ID_BASE		10		// ÈÈ¼ü
 
+//to do
+/*
+* read the outline of code
+* find how to read the clipboard in this file
+* find how to add custom action for special cmd in this file 
+* add special action for "trim newline and paste" in this file, just as [exit] 
+*	check if the clipboard content is a text format (messageBoxOut tmp info)
+*	remove all the newline characters, then write back to the clipboard (messageBoxOut tmp info)
+*	do the "Paste" action or simulate pressing Ctrl+V directly
+*/
+
 DWORD GetProcessIDFromName(LPCSTR szName);
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 void SetAutoRun();

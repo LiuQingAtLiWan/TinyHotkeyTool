@@ -48,7 +48,7 @@ This program enables global hotkey functionality on Windows, registering hotkeys
 
 There are now two recommended ways to compile the project:
 
-1. **Using CMake **  
+1. **Using CMake**  
    
    - Run `cmake` to generate a Visual Studio solution file (`*.sln`):  
      ```bash

@@ -16,5 +16,8 @@
 - **Build-related**
     - [ ] Set the project to depend on the MSVC static runtime library
     - [ ] Optimize the size of the resulting executable
+
+- **fix**
+    - [ ] Add the UAC-related feature that was described in the original version but not actually implemented.
 ---
 

@@ -37,6 +37,43 @@ struct Setting
 Setting* Settings;
 int nSet = 0;
 
+void SimulateCtrlV() {
+
+	// Create an array to hold the input events
+	INPUT inputs[4] = {};
+
+	// Ctrl key down
+	inputs[0].type = INPUT_KEYBOARD;
+	inputs[0].ki.wVk = VK_CONTROL;
+	inputs[0].ki.wScan = 0x1d;
+
+	// 'V' key down
+	inputs[1].type = INPUT_KEYBOARD;
+	inputs[1].ki.wVk = 'V';
+	inputs[1].ki.wScan = 0x2f;
+
+	// 'V' key up
+	inputs[2].type = INPUT_KEYBOARD;
+	inputs[2].ki.wVk = 'V';
+	inputs[2].ki.wScan = 0x2f;
+	inputs[2].ki.dwFlags = KEYEVENTF_KEYUP;
+
+	// Ctrl key up
+	inputs[3].type = INPUT_KEYBOARD;
+	inputs[3].ki.wVk = VK_CONTROL;
+	inputs[3].ki.wScan = 0x1d;
+	inputs[3].ki.dwFlags = KEYEVENTF_KEYUP;
+
+	UINT eventsSent = SendInput(ARRAYSIZE(inputs), inputs, sizeof(INPUT));
+	if (eventsSent != ARRAYSIZE(inputs)) {
+		OutputDebugString("SendInput failed.");
+	}
+	else {
+		OutputDebugString("Simulated Ctrl+V successfully!");
+	}
+
+}
+
 int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 	LPSTR lpCmdLine, int nShowCmd)
 {
@@ -259,6 +296,46 @@ void HotKeyProc(HWND hWnd, UINT uModifiers, UINT uVirtKey)
 				}
 				CloseClipboard();
 			}
+			else if (Settings[i].param == 3) // trimPaste
+			{
+
+				if (!OpenClipboard(nullptr)) {
+					OutputDebugString("Failed to open clipboard.\n");
+					break;
+				}
+
+				HANDLE hData = GetClipboardData(CF_TEXT);
+				if (hData == NULL) {
+					break;
+				}
+				bool trim = false;
+				char* pData = (char*)GlobalLock(hData);
+				char* pw = pData, * pr = pData;
+				for (;*pr != '\0';pr++) {
+					if (*pr != '\r' && *pr != '\n') {
+						*pw = *pr;
+						pw++;
+					}
+					else {
+						trim = true;
+					}
+				}
+				*pw = '\0';
+				if (trim) {
+					size_t sz = pw - pData;
+					HANDLE hnData = GlobalAlloc(GMEM_MOVEABLE, sz + 1);
+					char* pnData = (char*)GlobalLock(hnData);
+					strcpy_s(pnData, sz + 1, pData);
+					clipboard = pnData;
+					GlobalUnlock(hData);
+					GlobalUnlock(hnData);
+					EmptyClipboard();
+					SetClipboardData(CF_TEXT, hnData); // Set the clipboard data					
+				}
+				CloseClipboard();
+				SimulateCtrlV();
+				break;
+			}
 			string cmd = Settings[i].cmd;
 			//string exe = cmd.substr(0, cmd.find(".exe") + 4);
 			//if (0 == GetProcessIDFromName(exe.c_str()))
@@ -437,6 +514,10 @@ int ReadSetting()
 				else if (s[3] == "[clipboard]")
 				{
 					Settings[index].param = 2;
+				}
+				else if (s[3] == "[trimPaste]")
+				{
+					Settings[index].param = 3;
 				}
 				index++;
 			}

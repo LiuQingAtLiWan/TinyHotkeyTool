@@ -12,12 +12,9 @@
 - **Add Features**
     - [ ] Toggle between multiple top-level windows of the same application
     - [ ] *Remove newline characters from the clipboard text and paste it*
-
 - **Build-related**
     - [ ] Set the project to depend on the MSVC static runtime library
     - [ ] Optimize the size of the resulting executable
-
 - **fix**
-    - [ ] Add the UAC-related feature that was described in the original version but not actually implemented.
----
-
+    - [ ] Add the UAC-related feature that was described in the original version but not actually implemented
+    - [ ] Make sure only one instance of the program can be run 

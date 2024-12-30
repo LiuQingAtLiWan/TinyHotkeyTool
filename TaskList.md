@@ -12,7 +12,7 @@
 - **Add Features**
     - [ ] Toggle between multiple top-level windows of the same application
     - [ ] Add support for the `shift` key.
-    - [ ] *Remove newline characters from the clipboard text and paste it*
+    - [x] Remove newline characters from the clipboard text and paste it
 - **Build-related**
     - [ ] Set the project to depend on the MSVC static runtime library
     - [ ] Optimize the size of the resulting executable

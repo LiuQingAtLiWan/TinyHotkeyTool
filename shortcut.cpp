@@ -256,6 +256,78 @@ void ClearAutoRun()
 	}
 }
 
+
+bool TrimClipboardCtx()
+{
+	if (!OpenClipboard(nullptr)) {
+		OutputDebugString("Failed to open clipboard.\n");
+		return false;
+	}
+
+	if (IsClipboardFormatAvailable(CF_UNICODETEXT)) {
+		HANDLE hData = GetClipboardData(CF_UNICODETEXT);
+		if (hData == NULL) {
+			CloseClipboard();
+			return false;
+		}
+		bool trim = false;
+		wchar_t* pData = (wchar_t*)GlobalLock(hData);
+		wchar_t* pw = pData, * pr = pData;
+		for (;*pr != L'\0';pr++) {
+			if (*pr != L'\r' && *pr != L'\n') {
+				*pw = *pr;
+				pw++;
+			}
+			else {
+				trim = true;
+			}
+		}
+		*pw = L'\0';
+		if (trim) {
+			size_t sz = (pw - pData)*sizeof(*pw);
+			HANDLE hnData = GlobalAlloc(GMEM_MOVEABLE, (sz+1)*sizeof(*pw));
+			wchar_t* pnData = (wchar_t*)GlobalLock(hnData);
+			wcscpy_s(pnData, sz + 1, pData);
+			GlobalUnlock(hData);
+			GlobalUnlock(hnData);
+			EmptyClipboard();
+			SetClipboardData(CF_UNICODETEXT, hnData); // Set the clipboard data					
+		}
+	}
+	else if (IsClipboardFormatAvailable(CF_TEXT)) {
+		HANDLE hData = GetClipboardData(CF_TEXT);
+		if (hData == NULL) {
+			CloseClipboard();
+			return false;
+		}
+		bool trim = false;
+		char* pData = (char*)GlobalLock(hData);
+		char* pw = pData, * pr = pData;
+		for (;*pr != '\0';pr++) {
+			if (*pr != '\r' && *pr != '\n') {
+				*pw = *pr;
+				pw++;
+			}
+			else {
+				trim = true;
+			}
+		}
+		*pw = '\0';
+		if (trim) {
+			size_t sz = pw - pData;
+			HANDLE hnData = GlobalAlloc(GMEM_MOVEABLE, sz + 1);
+			char* pnData = (char*)GlobalLock(hnData);
+			strcpy_s(pnData, sz + 1, pData);
+			GlobalUnlock(hData);
+			GlobalUnlock(hnData);
+			EmptyClipboard();
+			SetClipboardData(CF_TEXT, hnData); // Set the clipboard data					
+		}
+	}
+	CloseClipboard();				
+	return true;
+}
+
 void HotKeyProc(HWND hWnd, UINT uModifiers, UINT uVirtKey)
 {
 	for (int i = 0; i < nSet; i++)
@@ -299,41 +371,9 @@ void HotKeyProc(HWND hWnd, UINT uModifiers, UINT uVirtKey)
 			else if (Settings[i].param == 3) // trimPaste
 			{
 
-				if (!OpenClipboard(nullptr)) {
-					OutputDebugString("Failed to open clipboard.\n");
-					break;
-				}
-
-				HANDLE hData = GetClipboardData(CF_TEXT);
-				if (hData == NULL) {
-					break;
-				}
-				bool trim = false;
-				char* pData = (char*)GlobalLock(hData);
-				char* pw = pData, * pr = pData;
-				for (;*pr != '\0';pr++) {
-					if (*pr != '\r' && *pr != '\n') {
-						*pw = *pr;
-						pw++;
-					}
-					else {
-						trim = true;
-					}
-				}
-				*pw = '\0';
-				if (trim) {
-					size_t sz = pw - pData;
-					HANDLE hnData = GlobalAlloc(GMEM_MOVEABLE, sz + 1);
-					char* pnData = (char*)GlobalLock(hnData);
-					strcpy_s(pnData, sz + 1, pData);
-					clipboard = pnData;
-					GlobalUnlock(hData);
-					GlobalUnlock(hnData);
-					EmptyClipboard();
-					SetClipboardData(CF_TEXT, hnData); // Set the clipboard data					
-				}
-				CloseClipboard();
-				SimulateCtrlV();
+				if (TrimClipboardCtx()) {
+					SimulateCtrlV();
+				};
 				break;
 			}
 			string cmd = Settings[i].cmd;

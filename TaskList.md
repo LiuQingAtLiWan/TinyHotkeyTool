@@ -10,7 +10,7 @@
     - [ ] Remove custom settings from `setting.ini`
     - [ ] Create a sample setting file
 - **Add Features**
-    - [ ] Toggle between multiple top-level windows of the same application
+    - [x] Toggle between multiple top-level windows of the same application
     - [ ] Add support for the `shift` key.
     - [x] Remove newline characters from the clipboard text and paste it
 - **Build-related**

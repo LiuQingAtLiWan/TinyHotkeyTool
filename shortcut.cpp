@@ -1,21 +1,30 @@
 #include <windows.h>
 #include <tlhelp32.h>
 #include <stdio.h>
+#include <psapi.h> 
 #include <string>
+#include <map>
+#include <list>
+#include <algorithm>
 using std::string;
+using std::wstring;
+using std::map;
+using std::list;
 
 #define HOTKEY_ID_BASE		10		// ÈÈ¼ü
-
-//to do
-/*
-* read the outline of code
-* find how to read the clipboard in this file
-* find how to add custom action for special cmd in this file 
-* add special action for "trim newline and paste" in this file, just as [exit] 
-*	check if the clipboard content is a text format (messageBoxOut tmp info)
-*	remove all the newline characters, then write back to the clipboard (messageBoxOut tmp info)
-*	do the "Paste" action or simulate pressing Ctrl+V directly
-*/
+namespace winSwitch{
+	map<wstring, list<HWND> > gWinLists;
+	HWND ghWnd = NULL;
+	bool inited = false;
+	void SwitchWins();
+	void InitIfNeed();
+	void AddToWinLists(HWND hWnd);
+	void RemoveFromWinLists(HWND hWnd);
+	wstring GetExeNameFromHwnd(HWND hWnd);
+	BOOL CALLBACK EnumWindowsProc(HWND hwnd, LPARAM lParam);
+	void WinChangeProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+	bool IsWindowTopShow(HWND hWnd);
+}
 
 DWORD GetProcessIDFromName(LPCSTR szName);
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -137,6 +146,11 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 	{
 		return FALSE;
 	}
+	winSwitch::ghWnd = hWnd;
+	if ( !RegisterShellHookWindow(hWnd)) {
+		MessageBox(NULL, "Î´ÄÜ×¢²á¹³×Ó£¡", "ShortCut", MB_OK | MB_ICONWARNING);
+		return FALSE;
+	}
 	// ¶ÁÈ¡ÅäÖÃ
 	nSet = ReadSetting();
 	if (nSet < 0)
@@ -189,6 +203,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		HotKeyProc(hWnd, UINT(LOWORD(lParam)), UINT(HIWORD(lParam)));
 		break;
 	default:
+		if (winSwitch::inited){
+			static UINT sShellHookMsg = RegisterWindowMessage("SHELLHOOK");
+			if (message == sShellHookMsg) {
+				OutputDebugString("new shellhook!");
+				winSwitch::WinChangeProc(hWnd, message, wParam, lParam);
+				break;
+			}
+		}
 		return DefWindowProc(hWnd, message, wParam, lParam);
 	}
 	return 0;
@@ -376,6 +398,11 @@ void HotKeyProc(HWND hWnd, UINT uModifiers, UINT uVirtKey)
 				};
 				break;
 			}
+			else if (Settings[i].param == 4) // switch windows of the same exe
+			{
+				winSwitch::SwitchWins();
+				break;
+			}
 			string cmd = Settings[i].cmd;
 			//string exe = cmd.substr(0, cmd.find(".exe") + 4);
 			//if (0 == GetProcessIDFromName(exe.c_str()))
@@ -559,6 +586,10 @@ int ReadSetting()
 				{
 					Settings[index].param = 3;
 				}
+				else if (s[3] == "[SWISA]")
+				{
+					Settings[index].param = 4;
+				}
 				index++;
 			}
 			nSet = index;
@@ -570,3 +601,153 @@ int ReadSetting()
 }
 
 
+
+void winSwitch::SwitchWins()
+{
+	InitIfNeed();
+	HWND hwnd = GetForegroundWindow();
+	auto exeName = GetExeNameFromHwnd(hwnd);
+	OutputDebugStringW(exeName.c_str());
+	auto itor = gWinLists.find(exeName);
+	if (itor == gWinLists.end()){
+		OutputDebugString("cant not find data in gMap!");
+		return;
+	}
+	auto& wList = itor->second;
+	char tmp[50];
+	sprintf_s(tmp, "list size:%d", wList.size());
+	OutputDebugString(tmp);
+	if (wList.empty()){
+		OutputDebugString("empty wList!");
+		return;
+	}
+	auto it = std::find(wList.begin(), wList.end(), hwnd);
+	if (it == wList.end()){
+		OutputDebugString("cant not find data in wList!");
+		return;
+	}
+	
+
+	if (++it == wList.end()) {
+		it = wList.begin();
+	}
+	ShowWindow(*it, SW_RESTORE);
+	SetForegroundWindow(*it);
+}
+
+BOOL CALLBACK winSwitch::EnumWindowsProc(HWND hwnd, LPARAM lParam)
+{
+	if ( !IsWindowTopShow(hwnd) || GetParent(hwnd) != NULL) {
+		return TRUE;
+	}
+	AddToWinLists(hwnd);
+	return TRUE;
+}
+
+void  winSwitch::InitIfNeed()
+{
+	if (inited) {
+		return;
+	}
+	if (!gWinLists.empty()) {
+		OutputDebugString("some dirty data in gWinLists!");
+		return;
+	}
+	EnumWindows(EnumWindowsProc, 0);
+	inited = true;
+	return;
+}
+
+
+void  winSwitch::AddToWinLists(HWND hWnd)
+{
+	auto exeName = GetExeNameFromHwnd(hWnd);
+	gWinLists[exeName].push_back(hWnd);
+}
+
+
+void  winSwitch::RemoveFromWinLists(HWND hWnd)
+{
+	auto exeName = GetExeNameFromHwnd(hWnd);
+	auto& wList = gWinLists[exeName];
+	for (auto it=wList.begin();it!=wList.end();)
+	{
+		if (hWnd == *it){
+			it = wList.erase(it);
+		}
+		else {
+			++it;
+		}
+	}
+	if (wList.empty()){
+		gWinLists.erase(exeName);
+		OutputDebugString("remove list!");
+		OutputDebugStringW(exeName.c_str());
+	}
+}
+
+wstring  winSwitch::GetExeNameFromHwnd(HWND hWnd) {
+	wstring re;
+	DWORD processId;
+	wchar_t exePath[MAX_PATH] = { 0 };
+
+	GetWindowThreadProcessId(hWnd, &processId);
+
+	HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, processId);
+	if (hProcess) {
+		if (GetModuleFileNameExW(hProcess, NULL, exePath, MAX_PATH)) {
+			re = exePath;
+		}
+		else {
+			OutputDebugString("GetModuleFileNameExW failed!");
+		}
+		CloseHandle(hProcess); // ¹Ø±Õ¾ä±ú
+	}
+	else {
+		OutputDebugString("Failed to open process!"); 
+	}
+	return re;
+};
+
+bool winSwitch::IsWindowTopShow(HWND hWnd) {
+	if (!IsWindowVisible(hWnd)) {
+		return false;
+	}
+	
+
+	LONG exStyle = GetWindowLongPtr(hWnd, GWL_EXSTYLE);
+
+	if (exStyle & WS_EX_TOOLWINDOW) {
+		return false;
+	}
+	return true;
+	/*
+	if (!(exStyle & WS_EX_APPWINDOW)) {
+		return false;
+	}
+	return true;
+	*/
+}
+void winSwitch::WinChangeProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+	if (!inited){
+		return;
+	}
+	if ( GetParent((HWND)lParam) != NULL){
+		return;
+	}
+	if (wParam == HSHELL_WINDOWCREATED) {
+		if (IsWindowTopShow((HWND)lParam)){
+			AddToWinLists((HWND)lParam);
+		}
+		
+	}
+	else if (wParam == HSHELL_WINDOWDESTROYED) {
+		LONG exStyle = GetWindowLongPtr(hWnd, GWL_EXSTYLE);
+		if (!(exStyle & WS_EX_TOOLWINDOW)) {
+			RemoveFromWinLists((HWND)lParam);
+		}
+		
+	}
+	
+}

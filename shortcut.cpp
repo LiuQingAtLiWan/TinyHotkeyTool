@@ -6,6 +6,7 @@ using std::string;
 
 #define HOTKEY_ID_BASE		10		// 热键
 
+BOOL IsProcessElevated();
 DWORD GetProcessIDFromName(LPCSTR szName);
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 void SetAutoRun();
@@ -25,39 +26,21 @@ struct Setting
 };
 Setting* Settings;
 int nSet = 0;
+HANDLE ghMutex = NULL;
 
 int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 	LPSTR lpCmdLine, int nShowCmd)
 {
 	// 防止重复打开与提权
-	HANDLE hMutex = CreateMutex(NULL, FALSE, "ShortCut");
-	if (__argc < 2 || strcmp(__argv[1], "uac") != 0)	
-	{
+	ghMutex = CreateMutex(NULL, FALSE, "ShortCut");
 		// 防止重复打开
-		if (GetLastError() == ERROR_ALREADY_EXISTS)
-		{
-			CloseHandle(hMutex);
-			MessageBox(NULL, "程序已经在运行！", "ShortCut", MB_OK | MB_ICONWARNING);
-			return FALSE;
-		}
-		// 提权
-		TCHAR szPath[MAX_PATH] = { 0 };
-		GetModuleFileName(NULL, szPath, MAX_PATH);
-		TCHAR szParams[MAX_PATH] = { 0 };
-		sprintf_s(szParams, MAX_PATH, "uac");
-		for (int i = 1; i < __argc; i++)
-		{
-			sprintf_s(szParams, MAX_PATH, "%s %s", szParams, __argv[i]);
-		}
-		SHELLEXECUTEINFO si = { 0 };
-		si.cbSize = sizeof(SHELLEXECUTEINFOW);
-		si.lpFile = szPath;
-		si.lpVerb = TEXT("runas");
-		si.lpDirectory = NULL;
-		si.lpParameters = szParams;
-		ShellExecuteEx(&si);
+	if (GetLastError() == ERROR_ALREADY_EXISTS)
+	{
+		CloseHandle(ghMutex);
+		MessageBox(NULL, "程序已经在运行！", "ShortCut", MB_OK | MB_ICONWARNING);
 		return FALSE;
 	}
+
 	// 是否开机启动
 	if (__argc < 3 || strcmp(__argv[2], "AutoRun") != 0)
 	{
@@ -248,6 +231,46 @@ void HotKeyProc(HWND hWnd, UINT uModifiers, UINT uVirtKey)
 				}
 				CloseClipboard();
 			}
+			else if (Settings[i].param == 3)// 提权
+			{
+				if (IsProcessElevated())// (IsAdminProcess(0))
+				{
+					MessageBox(NULL, "已有管理员权限,无需再次提权！", "ShortCut", MB_OK | MB_ICONWARNING);
+					continue;;
+				}
+				//尚未获得管理员权限，需要提权
+				for (int k = 0; k < nSet; k++)
+				{
+					UnregisterHotKey(hWnd, HOTKEY_ID_BASE + k);
+				}
+				delete[] Settings;
+
+				// 提权
+				MessageBox(NULL, "准备提权！", "ShortCut", MB_OK | MB_ICONWARNING);
+				TCHAR szPath[MAX_PATH] = { 0 };
+				GetModuleFileName(NULL, szPath, MAX_PATH);
+				TCHAR szParams[MAX_PATH] = { 0 };
+				sprintf_s(szParams, MAX_PATH, "uac AutoRun");
+				for (int i = 1; i < __argc; i++)
+				{
+					sprintf_s(szParams, MAX_PATH, "%s %s", szParams, __argv[i]);
+				}
+				SHELLEXECUTEINFO si = { 0 };
+				si.cbSize = sizeof(SHELLEXECUTEINFOW);
+				si.lpFile = szPath;
+				si.lpVerb = TEXT("runas");
+				si.lpDirectory = NULL;
+				si.lpParameters = szParams;
+
+				if (ghMutex != NULL)
+				{
+					CloseHandle(ghMutex);
+				}
+				ShellExecuteEx(&si);
+				PostQuitMessage(0);
+				break;
+				
+			}		
 			string cmd = Settings[i].cmd;
 			//string exe = cmd.substr(0, cmd.find(".exe") + 4);
 			//if (0 == GetProcessIDFromName(exe.c_str()))
@@ -427,6 +450,10 @@ int ReadSetting()
 				{
 					Settings[index].param = 2;
 				}
+				else if (s[3] == "[uac]")
+				{
+					Settings[index].param = 3;
+				}
 				index++;
 			}
 			nSet = index;
@@ -435,6 +462,29 @@ int ReadSetting()
 		return nSet;
 	}
 	return -1;
+}
+
+BOOL IsProcessElevated()
+{
+	BOOL fIsElevated = FALSE;
+	HANDLE hToken = NULL;
+	TOKEN_ELEVATION elevation;
+	DWORD dwSize;
+
+	if (OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken))
+	{
+		if (GetTokenInformation(hToken, TokenElevation, &elevation, sizeof(elevation), &dwSize))
+		{
+			fIsElevated = elevation.TokenIsElevated;
+		}
+	}
+
+	if (hToken)
+	{
+		CloseHandle(hToken);
+		hToken = NULL;
+	}
+	return fIsElevated;
 }
 
 

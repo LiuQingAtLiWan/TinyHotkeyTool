@@ -16,6 +16,6 @@
 - **Build-related**
     - [ ] Set the project to depend on the MSVC static runtime library
     - [ ] Optimize the size of the resulting executable
-- **fix**
-    - [ ] Add the UAC-related feature that was described in the original version but not actually implemented
-    - [ ] Make sure only one instance of the program can be run 
+- **fix**（done in the branch of ‘’original_from_yanglx2022“）
+    - [x] Add the UAC-related feature that was described in the original version but not actually implemented
+    - [x] Make sure only one instance of the program can be run 

@@ -7,15 +7,26 @@
 ---
 
 - **Program and Settings**
-    - [ ] Remove custom settings from `setting.ini`
-    - [ ] Create a sample setting file
+    - [x] Remove custom settings from `setting.ini`
+    - [x] Create a sample setting file
+    
 - **Add Features**
+  
     - [x] Toggle between multiple top-level windows of the same application
     - [ ] Add support for the `shift` key.
     - [x] Remove newline characters from the clipboard text and paste it
+    - [ ] Automatic acquisition of UAC privileges
+    
 - **Build-related**
     - [ ] Set the project to depend on the MSVC static runtime library
     - [ ] Optimize the size of the resulting executable
-- **fix**（done in the branch of ‘’original_from_yanglx2022“）
+    
+- **fix**
+  
     - [x] Add the UAC-related feature that was described in the original version but not actually implemented
-    - [x] Make sure only one instance of the program can be run 
+      - done in the branch of ‘’original_from_yanglx2022“
+  - [x] Make sure only one instance of the program can be run 
+  
+- **better code and reconstruct**
+  
+    - [ ] Remove autorun setting
